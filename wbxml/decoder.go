@@ -2,6 +2,7 @@ package wbxml
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -171,6 +172,13 @@ func (d *Decoder) decodeAttributes() (string, error) {
 				content, err = d.decodeStringTableReference()
 			} else if nextByte == STR_I {
 				content, err = d.decodeInlineString()
+			} else if nextByte == OPAQUE {
+				nextByte, _ = d.reader.ReadByte()
+				content, err = d.decodeOpaqueAttribute()
+				if !firstAttribute && nextByte < ATTRIBUTE_VALUE_SPACE_START {
+					content = "\"" + content
+				}
+				firstAttribute = false
 			} else {
 				content, err = d.decodeAttribute()
 				if !firstAttribute && nextByte < ATTRIBUTE_VALUE_SPACE_START {
@@ -206,6 +214,29 @@ func (d *Decoder) decodeAttribute() (string, error) {
 	nextByte, err = d.reader.ReadByte()
 	if err == nil {
 		result = d.currentAttributeCodePage.GetString(nextByte)
+	}
+
+	return result, err
+}
+
+func (d *Decoder) decodeOpaqueAttribute() (string, error) {
+	var (
+		nextByte byte
+		err      error
+		result   string
+		charByte byte
+		charErr  error
+	)
+
+	nextByte, err = d.reader.ReadByte()
+	if err == nil {
+		for i := byte(0); i < nextByte; i++ {
+			charByte, charErr = d.reader.ReadByte()
+			if charErr == nil {
+				byteArr := []byte{charByte}
+				result += hex.EncodeToString(byteArr)
+			}
+		}
 	}
 
 	return result, err
