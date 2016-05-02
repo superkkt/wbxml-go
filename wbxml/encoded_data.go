@@ -144,33 +144,10 @@ func (e *element) encodeAttributes(w io.Writer) error {
 }
 
 func (e *element) encodeCharData(w io.Writer, charData xml.CharData) error {
-	first := true
 	_, err := w.Write([]byte{STR_I})
 	if err == nil {
 		s := fmt.Sprintf("%s", charData)
-		for _, c := range s {
-			if c >= 0x20 && c <= 0x7E {
-				_, err = w.Write([]byte{byte(c)})
-				first = false
-			} else {
-				if !first {
-					_, err = w.Write([]byte{0x00})
-					if err != nil {
-						return err
-					}
-				}
-
-				first = false
-				_, err = w.Write([]byte{ENTITY})
-				if err == nil {
-					err = writeMultiByteUint32(w, uint32(c))
-					if err == nil {
-						_, err = w.Write([]byte{STR_I})
-					}
-				}
-			}
-		}
-
+		_, err = w.Write([]byte(s))
 		if err == nil {
 			_, err = w.Write([]byte{0x00})
 		}
